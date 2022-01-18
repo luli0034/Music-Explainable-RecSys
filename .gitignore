@@ -130,3 +130,6 @@ dmypy.json
 
 /py37
 /data
+/kg-data
+test.py
+test.sh

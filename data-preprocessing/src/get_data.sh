@@ -1,6 +1,8 @@
 #!/bin/sh
 DATA_DIR="./data"
 SOURCE_DATA_DIR="$DATA_DIR/source"
+OUTPUT_DIR="./output/"
+
 echo "$DATA_DIR $SOURCE_DATA_DIR"
 [ ! -d "$DATA_DIR" ] && mkdir -p "$DATA_DIR"
 if [ -d "$SOURCE_DATA_DIR" ]; then
@@ -23,3 +25,8 @@ for filename in $SOURCE_DATA_DIR/*.csv.7z; do
     7z x "$filename" -o"$SOURCE_DATA_DIR"
     rm "$filename"
 done
+
+echo "5. Data Preprocessing"
+python src/main.py --path "$SOURCE_DATA_DIR/" --output_path $OUTPUT_DIR
+
+echo "Done"
