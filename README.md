@@ -4,67 +4,73 @@
 
 ## Preparing Data
 
-Data preprocessing includes downloading data from Kaggle, and processing those data into KG-format (*head → relation ← tail*). You can simply build a docker image with the following steps and run the container to get the training data.
+1. Download the data from [Kaggle.com](https://www.kaggle.com/c/kkbox-music-recommendation-challenge), and process the downloaded data into KG-format.
+    <details>
+      <summary> ⏬ Let's get the data!</summary>
 
-Make sure you have `kaggle.json` in the same directory, the download scripts will look for this token.
+    Data preprocessing includes downloading data from Kaggle, and processing those data into KG-format (*head → relation ← tail*). You can simply build a docker image with the following steps and run the container to get the training data.
 
-If you’ve not:
+    Make sure you have `kaggle.json` in the same directory, the download scripts will look for this token.
 
-1. Go to the link: https://www.kaggle.com/{account}/account
-2. Click the button `Create New API Token`.
-3. Download the file named `kaggle.json`, the content will look like the following:
-    
-    ```python
-    {"username":"{account}","key":"{hash_key}"}
+    If you’ve not:
+
+    1. Go to the link: https://www.kaggle.com/{account}/account
+    2. Click the button `Create New API Token`.
+    3. Download the file named `kaggle.json`, the content will look like the following:
+
+        ```python
+        {"username":"{account}","key":"{hash_key}"}
+        ```
+
+
+    Change directory into folder: `data-preprocessing`, and build a docker image named `build_kg`:
+
+    ```bash
+    cd ./data-preprocessing
+    docker build -t build_kg . --no-cache
     ```
-    
 
-Change directory into folder: `data-preprocessing`, and build a docker image named `build_kg`:
+    The content of Dockerfile show below:
 
-```bash
-cd ./data-preprocessing
-docker build -t build_kg . --no-cache
-```
+    ```docker
+    FROM python:3.7-slim
 
-The content of Dockerfile show below:
+    WORKDIR /data-preprocessing
 
-```docker
-FROM python:3.7-slim
+    COPY ./requirements.txt /data-preprocessing/requirements.txt
 
-WORKDIR /data-preprocessing
+    RUN apt-get update \
+        && apt-get install gcc -y \
+        && apt-get clean \
+        && apt-get install zip -y \
+        && apt-get install p7zip-full -y
 
-COPY ./requirements.txt /data-preprocessing/requirements.txt
+    RUN pip install --upgrade pip \
+        && pip install -r /data-preprocessing/requirements.txt \
+        && rm -rf /root/.cache/pip
 
-RUN apt-get update \
-    && apt-get install gcc -y \
-    && apt-get clean \
-    && apt-get install zip -y \
-    && apt-get install p7zip-full -y
+    COPY ./kaggle.json /root/.kaggle/kaggle.json
+    COPY ./src /data-preprocessing/src/
 
-RUN pip install --upgrade pip \
-    && pip install -r /data-preprocessing/requirements.txt \
-    && rm -rf /root/.cache/pip
+    CMD ["bash", "src/get_data.sh"]
+    ```
 
-COPY ./kaggle.json /root/.kaggle/kaggle.json
-COPY ./src /data-preprocessing/src/
+    Run the container and mount the *output directory* to your *local directory*:
 
-CMD ["bash", "src/get_data.sh"]
-```
+    ```powershell
+    docker run -d -v {local_directory}:/data-preprocessing/src/output/ --name preprocessing build_kg
+    ```
 
-Run the container and mount the *output directory* to your *local directory*:
+    Also, you can check the running progress with `docker logs`
 
-```powershell
-docker run -d -v {local_directory}:/data-preprocessing/src/output/ --name preprocessing build_kg
-```
+    ```powershell
+    docker logs -f preprocessing
+    ```
 
-Also, you can check the running progress with `docker logs`
+    Once the container have done its works, the three `csv` files will show in the *local directory.*
 
-```powershell
-docker logs -f preprocessing
-```
+    1. `kg_members.csv` : Member’s basic information such as gender, age, etc. 
+    2. `kg_songs.csv` : Song’s information including basic and extending features such as artist name, composer, years, etc.
+    3. `kg_user_interation.csv` : Members who has interest the song.
 
-Once the container have done its works, the three `csv` files will show in the *local directory.*
-
-1. `kg_members.csv` : Member’s basic information such as gender, age, etc. 
-2. `kg_songs.csv` : Song’s information including basic and extending features such as artist name, composer, years, etc.
-3. `kg_user_interation.csv` : Members who has interest the song.
+    </details> 
