@@ -6,7 +6,7 @@
 
 1. Download the data from [Kaggle.com](https://www.kaggle.com/c/kkbox-music-recommendation-challenge), and process the downloaded data into KG-format.
     <details>
-      <summary> ⏬ Let's get the data!</summary>
+      <summary> Let's get the data!</summary>
 
     Data preprocessing includes downloading data from Kaggle, and processing those data into KG-format (*head → relation ← tail*). You can simply build a docker image with the following steps and run the container to get the training data.
 
@@ -29,32 +29,36 @@
     cd ./data-preprocessing
     docker build -t build_kg . --no-cache
     ```
+    
+    <details>
+        <summary> Show Dockerfile</summary>
+        
+        
+        
+        FROM python:3.7-slim
 
-    The content of Dockerfile show below:
+        WORKDIR /data-preprocessing
 
-    ```docker
-    FROM python:3.7-slim
+        COPY ./requirements.txt /data-preprocessing/requirements.txt
 
-    WORKDIR /data-preprocessing
+        RUN apt-get update \
+            && apt-get install gcc -y \
+            && apt-get clean \
+            && apt-get install zip -y \
+            && apt-get install p7zip-full -y
 
-    COPY ./requirements.txt /data-preprocessing/requirements.txt
+        RUN pip install --upgrade pip \
+            && pip install -r /data-preprocessing/requirements.txt \
+            && rm -rf /root/.cache/pip
 
-    RUN apt-get update \
-        && apt-get install gcc -y \
-        && apt-get clean \
-        && apt-get install zip -y \
-        && apt-get install p7zip-full -y
+        COPY ./kaggle.json /root/.kaggle/kaggle.json
+        COPY ./src /data-preprocessing/src/
 
-    RUN pip install --upgrade pip \
-        && pip install -r /data-preprocessing/requirements.txt \
-        && rm -rf /root/.cache/pip
+        CMD ["bash", "src/get_data.sh"]
+        
 
-    COPY ./kaggle.json /root/.kaggle/kaggle.json
-    COPY ./src /data-preprocessing/src/
-
-    CMD ["bash", "src/get_data.sh"]
-    ```
-
+    </details>
+    
     Run the container and mount the *output directory* to your *local directory*:
 
     ```powershell
