@@ -133,3 +133,10 @@ dmypy.json
 /kg-data
 test.py
 test.sh
+/kg-training/src/KGE
+/kg-training/src/output/ent_emb.pkl
+/kg-training/src/output/rel_emb.pkl
+/postgres-data
+/data-preprocessing/kaggle.json
+/output
+/tensorboard_logs

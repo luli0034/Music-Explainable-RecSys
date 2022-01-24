@@ -55,8 +55,8 @@ def build_member_kg(members):
     member_kg = pd.concat([member_kg, to_kg_format(df=members, h='msno', r='live_in', t='city', ent2type=ent2type)])
     member_kg = pd.concat([member_kg, to_kg_format(df=members, h='msno', r='gender', t='gender', ent2type=ent2type)])
     member_kg = member_kg[member_kg['t']!=-1]
-
-    return member_kg
+    member_kg = member_kg.applymap(str.strip)
+    return member_kg.sample(frac=0.1)
 
 
 def build_song_kg(songs, songs_extra):
@@ -169,6 +169,7 @@ def main():
                                                   'source_type' : 'category',
                                                   'target' : np.uint8,
                                                   'song_id' : 'category'})
+    train = train[train['msno'].isin(pd.unique(member_kg['h']))].reset_index()
     user_interaction = build_user_interaction(train, songs)
 
     member_kg.to_csv(args.output_path+'kg_members.csv', index=False, encoding='utf8')
