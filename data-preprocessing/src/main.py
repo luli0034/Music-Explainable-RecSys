@@ -19,9 +19,9 @@ ent2type = {
     'song_id':'song',
     'song_length':'catrgory',
     'genre_ids':'category',
-    'artist_name': 'person',
-    'lyricist': 'person',
-    'composer': 'person',
+    'artist_name': 'artist',
+    'lyricist': 'lyricist',
+    'composer': 'composer',
     'song_year': 'datetime',
     'country': 'category',
     'registrant': 'person',
@@ -56,7 +56,7 @@ def build_member_kg(members):
     member_kg = pd.concat([member_kg, to_kg_format(df=members, h='msno', r='gender', t='gender', ent2type=ent2type)])
     member_kg = member_kg[member_kg['t']!=-1]
     member_kg = member_kg.applymap(str.strip)
-    return member_kg.sample(frac=0.1)
+    return member_kg
 
 
 def build_song_kg(songs, songs_extra):
@@ -78,23 +78,30 @@ def build_song_kg(songs, songs_extra):
     songs_extra : [type]
         [description]
     """
+    def split(x):
+        try:
+            x = x.split('|')
+        except:
+            x = -1
+        return x
+
     _mean_song_length = np.mean(songs['song_length'])
     songs['song_length'] = songs['song_length'].apply(lambda x: 'long' if x>_mean_song_length else 'short')
-    songs['genre_ids'].fillna('no_genre_id', inplace=True)
-    songs['genre_ids'] = songs['genre_ids'].apply(lambda x: x.split('|'))
-    songs['composer'].fillna('no_composer', inplace=True)
-    songs['composer'] = songs['composer'].apply(lambda x: x.split('|'))
-    songs['lyricist'].fillna('no_lyricist', inplace=True)
-    songs['lyricist'] = songs['lyricist'].apply(lambda x: x.split('|'))
+    songs['genre_ids'].fillna(-1, inplace=True)
+    songs['genre_ids'] = songs['genre_ids'].apply(lambda x: split(x))
+    songs['composer'].fillna(-1, inplace=True)
+    songs['composer'] = songs['composer'].apply(lambda x: split(x))
+    songs['lyricist'].fillna(-1, inplace=True)
+    songs['lyricist'] = songs['lyricist'].apply(lambda x: split(x))
     songs['language'] = songs['language'].apply(lambda x: 'lng_'+str(x))
 
     songs = songs.fillna(-1)
     song_kg = pd.DataFrame(columns=['h','h_type','r','t','t_type'])
-    song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='belongs', t='song_length', ent2type=ent2type)])
-    song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='belongs', t='genre_ids', ent2type=ent2type)])
+    song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='len_belongs', t='song_length', ent2type=ent2type)])
+    song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='genre_belongs', t='genre_ids', ent2type=ent2type)])
     song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='sing_by', t='artist_name', ent2type=ent2type)])
-    song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='write_by', t='composer', ent2type=ent2type)])
-    song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='write_by', t='lyricist', ent2type=ent2type)])
+    song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='composer_is', t='composer', ent2type=ent2type)])
+    song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='lyricist_is', t='lyricist', ent2type=ent2type)])
     song_kg = pd.concat([song_kg, to_kg_format(df=songs, h='song_id', r='language_in', t='language', ent2type=ent2type)])
 
     songs_extra['song_year'] = songs_extra['isrc'].apply(isrc_processing('year'))
@@ -124,7 +131,6 @@ def build_user_interaction(train, songs):
         [description]
     """
     train.drop(['source_system_tab', 'source_screen_name', 'source_type'], axis = 1, inplace = True)
-    train = train[train['target']==1]
     user_interaction = pd.DataFrame(columns=['h','h_type','r','t','t_type'])
     user_interaction = pd.concat([user_interaction, to_kg_format(df=train, h='msno', r='has_interest', t='song_id', ent2type=ent2type)])
 
@@ -132,18 +138,18 @@ def build_user_interaction(train, songs):
     # gerne
     user_gerne = train[['msno', 'genre_ids']].explode('genre_ids')
     user_genre_top_3 = dict(user_gerne.groupby('msno', observed=True)['genre_ids'].value_counts().groupby(level=0).head(3)).keys()
-    user_interaction = pd.concat([user_interaction, keys_to_kg_format(keys=user_genre_top_3, h='msno', r='like', t='genre_ids', ent2type=ent2type)])
+    user_interaction = pd.concat([user_interaction, keys_to_kg_format(keys=user_genre_top_3, h='msno', r='like_genre', t='genre_ids', ent2type=ent2type)])
     # artist
     user_artist_top_3 = dict(train.groupby('msno', observed=True)['artist_name'].value_counts().groupby(level=0).head(3)).keys()
-    user_interaction = pd.concat([user_interaction, keys_to_kg_format(keys=user_artist_top_3, h='msno', r='like', t='artist_name', ent2type=ent2type)])
+    user_interaction = pd.concat([user_interaction, keys_to_kg_format(keys=user_artist_top_3, h='msno', r='like_artist', t='artist_name', ent2type=ent2type)])
     # composer
     user_composer = train[['msno', 'composer']].explode('composer')
     user_composer_top_3 = dict(user_composer.groupby('msno', observed=True)['composer'].value_counts().groupby(level=0).head(3)).keys()
-    user_interaction = pd.concat([user_interaction, keys_to_kg_format(keys=user_composer_top_3, h='msno', r='like', t='composer', ent2type=ent2type)])
+    user_interaction = pd.concat([user_interaction, keys_to_kg_format(keys=user_composer_top_3, h='msno', r='like_composer', t='composer', ent2type=ent2type)])
     # lyricist
     user_lyricist = train[['msno', 'lyricist']].explode('lyricist')
     user_lyricist_top_3 = dict(user_lyricist.groupby('msno', observed=True)['lyricist'].value_counts().groupby(level=0).head(3)).keys()
-    user_interaction = pd.concat([user_interaction, keys_to_kg_format(keys=user_lyricist_top_3, h='msno', r='like', t='lyricist', ent2type=ent2type)])
+    user_interaction = pd.concat([user_interaction, keys_to_kg_format(keys=user_lyricist_top_3, h='msno', r='like_lyricist', t='lyricist', ent2type=ent2type)])
     
     user_interaction = user_interaction[user_interaction['t']!=-1]
     return user_interaction
@@ -152,7 +158,12 @@ def build_user_interaction(train, songs):
 def main():
 
     members = pd.read_csv(args.path + 'members.csv', parse_dates=['registration_init_time','expiration_date'])
-    member_kg = build_member_kg(members)
+    members = members.sample(frac=0.5, random_state=2021).reset_index(drop=True)
+    member_ids = members[['msno']]
+    msno2index = {v: f'user_{k}' for k, v in member_ids.to_dict('dict')['msno'].items()}
+    member_ids['index'] = member_ids['msno'].apply(lambda msno: msno2index[msno])
+    members['msno'] = members['msno'].apply(lambda msno: msno2index[msno])
+    member_kg = build_member_kg(members)    
 
     songs = pd.read_csv(args.path + 'songs.csv',dtype={'genre_ids': str,
                                                   'language' : str,
@@ -160,20 +171,33 @@ def main():
                                                   'composer' : str,
                                                   'lyricist' : str,
                                                   'song_id' : str})
+    songs = songs.sample(frac=0.1, random_state=2021).reset_index(drop=True)                                                  
+    song_ids = songs[['song_id']]                                                  
+    song2index = {v: f'song_{k}' for k, v in song_ids.to_dict('dict')['song_id'].items()}
+    song_ids['index'] = song_ids['song_id'].apply(lambda song_id: song2index[song_id])
+    songs['song_id'] = songs['song_id'].apply(lambda song_id: song2index[song_id])
     songs_extra = pd.read_csv(args.path + 'song_extra_info.csv')    
+    songs_extra = songs_extra[songs_extra['song_id'].isin(song2index)].reset_index(drop=True)
+    songs_extra['song_id'] = songs_extra['song_id'].apply(lambda song_id: song2index[song_id])
     song_kg, songs = build_song_kg(songs, songs_extra)
-
-    train = pd.read_csv(args.path + 'train.csv', dtype={'msno' : 'category',
-                                                'source_system_tab' : 'category',
-                                                  'source_screen_name' : 'category',
-                                                  'source_type' : 'category',
+    
+    train = pd.read_csv(args.path + 'train.csv', dtype={'msno' : str,
+                                                'source_system_tab' : str,
+                                                  'source_screen_name' : str,
+                                                  'source_type' : str,
                                                   'target' : np.uint8,
-                                                  'song_id' : 'category'})
-    train = train[train['msno'].isin(pd.unique(member_kg['h']))].reset_index()
+                                                  'song_id' : str})
+    train = train[train['target']==1].reset_index(drop=True)
+    train = train[train['msno'].isin(msno2index)].reset_index(drop=True)
+    train['msno'] = train['msno'].apply(lambda msno: msno2index[msno])
+    train = train[train['song_id'].isin(song2index)].reset_index(drop=True)
+    train['song_id'] = train['song_id'].apply(lambda song_id: song2index[song_id])    
     user_interaction = build_user_interaction(train, songs)
 
     member_kg.to_csv(args.output_path+'kg_members.csv', index=False, encoding='utf8')
+    member_ids.to_csv(args.output_path + 'members.csv', index=False, encoding='utf8')
     song_kg.to_csv(args.output_path+'kg_song.csv', index=False, encoding='utf8')
+    song_ids.to_csv(args.output_path + 'songs.csv', index=False, encoding='utf8')
     user_interaction.to_csv(args.output_path+'kg_user_interaction.csv', index=False, encoding='utf8')
 
 if __name__ == "__main__":

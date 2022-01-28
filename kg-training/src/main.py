@@ -48,13 +48,13 @@ def main():
 
     
     model = TransE(
-        embedding_params={"embedding_size": 10},
+        embedding_params={"embedding_size": 32},
         negative_ratio=4,
         corrupt_side="h+t"
     )
-    model.train(train_X=train, val_X=valid, metadata=metadata, epochs=2, batch_size=512,
+    model.train(train_X=train, val_X=valid, metadata=metadata, epochs=10, batch_size=512,
                 early_stopping_rounds=None, restore_best_weight=False,
-                optimizer=tf.optimizers.Adam(learning_rate=0.0001),
+                optimizer=tf.optimizers.Adam(learning_rate=0.001),
                 seed=12345, log_path="./tensorboard_logs", log_projector=True)
 
     with open(args.output_path+'ent_emb.pkl', 'wb') as f:

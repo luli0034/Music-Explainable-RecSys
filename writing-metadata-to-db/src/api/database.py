@@ -11,10 +11,13 @@ engine = create_engine(
 )
 
 
-metadata_obj = MetaData()
-UserLikeSong = Table('UserLikeSong', metadata_obj,
-            Column('msno', String, primary_key=True),
-            Column('song_id', String, primary_key=True)
-        )
+metadata = MetaData()
+
+def get_table_obj(table, columns):
+    return Table(
+        table, metadata, *columns
+    )
+
+    
 
 

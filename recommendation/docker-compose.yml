@@ -1,0 +1,25 @@
+version: '3.3'
+
+services:
+  services:
+    container_name: servives
+    build: ./services/
+    ports:
+      - 8080:8080
+    volumes:
+      - type: bind
+        source: ./services/app
+        target: /app/app
+    environment:
+      - DATABASE_URL=postgresql://root:12345678@dbserver/test_db
+    depends_on:
+      - dbserver
+
+  dbserver:
+    image: postgres:12.1-alpine
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=12345678
+      - POSTGRES_DB=test_db
